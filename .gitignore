@@ -1,0 +1,25 @@
+# Local dependencies and temporary output
+node_modules/
+coverage/
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Local secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Personal recordings, media, and local validation captures
+recordings/
+validation/
+*.webm
+*.mp4
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.zip

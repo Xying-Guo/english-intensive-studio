@@ -1,0 +1,11 @@
+{
+  "name": "english-intensive-studio",
+  "version": "0.3.1",
+  "private": true,
+  "description": "A local-first Chrome MV3 English study companion for YouTube",
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "preview": "node scripts/preview.cjs",
+    "check": "node scripts/check.cjs"
+  }
+}

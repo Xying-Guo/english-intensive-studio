@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>English Intensive Studio · 英语精学</title>
+  <link rel="stylesheet" href="studio.css">
+  <script src="core.js" defer></script>
+  <script src="panel.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">i<span>·</span></span><div><strong>Intensive Studio</strong><span class="eyebrow">英语精学工作台</span></div></div>
+    <span class="privacy-badge"><i></i> 本地练习</span>
+  </header>
+  <main>
+    <section class="intro"><span class="eyebrow">LESS, BUT DEEPER</span><h1>把一句话，练成自己的。</h1><p>精听 · 理解 · 模仿 · 再说一次</p></section>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="video-card" aria-label="视频连接">
+      <div class="section-label"><span><i class="connection-dot" id="connection-dot"></i> <span id="connection-label">等待连接 YouTube</span></span><button id="connect" class="text-button">连接当前视频 ↗</button></div>
+      <h2 id="video-title">打开一个你想认真听懂的视频</h2>
+      <div class="video-meta"><span id="video-time">— / —</span><span id="playback-state">尚未连接</span></div>
+      <div class="progress-track"><div id="video-progress"></div></div>
+      <div class="video-actions"><button id="extract" class="button primary">读取页面文字稿</button><button id="toggle-play" class="button subtle" title="播放或暂停当前视频">播放 / 暂停</button></div>
+      <p id="source-info" class="helper">先打开 YouTube 的“转写文稿”，再读取。也可以在下方粘贴字幕。</p>
+    </section>
+    <details id="import-details" class="import-box"><summary>粘贴文字稿 / 导入 SRT、VTT <span>＋</span></summary><div class="details-body">
+      <label class="field-label" for="transcript-input">保留时间戳；字幕与当前视频需为同一版本</label>
+      <textarea id="transcript-input" rows="5" placeholder="0:00&#10;第一条英文字幕&#10;0:06&#10;下一条英文字幕"></textarea>
+      <div class="row"><button id="import-text" class="button primary">导入文字</button><label class="button subtle file-label">选择字幕文件<input id="subtitle-file" type="file" accept=".srt,.vtt,.txt,text/plain"></label></div>
+      <div class="offset-row"><label for="offset">字幕整体偏移（秒）</label><input id="offset" type="number" step="0.1" value="0"><button id="apply-offset" class="text-button">应用</button></div>
+      <p class="helper">正数：字幕对应时间向后移。只有开始时间时，终点按下一条推算。</p>
+    </div></details>
+    <nav class="workspace-tabs" aria-label="学习区域">
+      <button class="tab active" data-tab="transcript" aria-pressed="true">01 字幕精听 <span id="cue-count">0</span></button>
+      <button class="tab" data-tab="practice" aria-pressed="false">02 录音跟练</button>
+      <button class="tab" data-tab="tutor" aria-pressed="false">03 配合 GPT</button>
+    </nav>
+    <section id="transcript-view" class="workspace-view">
+      <div class="chapter-heading"><label for="chapter" class="section-label">LEARNING CHAPTER</label><button id="chapter-copy" class="text-button">本章准备到学习卡片 ↗</button></div>
+      <select id="chapter" aria-label="选择约五分钟章节"><option value="">读取字幕后生成章节</option></select>
+      <div class="transcript-toolbar"><input id="search" type="search" aria-label="搜索当前章节字幕" placeholder="搜索当前章节…"><label class="follow-label"><input id="follow" type="checkbox" checked> 跟随播放</label></div>
+      <div id="transcript-empty" class="empty-state"><div class="empty-symbol" aria-hidden="true">“ ”</div><h3>先听一小段，再学深一点。</h3><p>读取或导入字幕后，点击原句定位。<br>每句都可以循环、展开跟练。</p></div>
+      <div id="transcript-list" class="transcript-list" aria-label="带时间戳字幕"></div>
+      <p id="transcript-footnote" class="helper" hidden>原文来自字幕，可能包含识别错误。选中句和播放中句分别显示。</p>
+    </section>
+    <section id="practice-view" class="workspace-view" hidden>
+      <div id="practice-empty" class="empty-state"><div class="empty-symbol" aria-hidden="true">↺</div><h3>从一句值得学的话开始。</h3><p>在字幕中点击“跟练”，<br>原声与自己的声音都留在这里。</p></div>
+      <div id="practice-content" hidden>
+        <div class="section-label"><span>CURRENT SENTENCE</span><button id="back-to-transcript" class="text-button">返回字幕 ↗</button></div>
+        <blockquote id="target-text"></blockquote>
+        <div class="row sentence-navigation"><button id="previous" class="button subtle small">← 上一句</button><button id="merge-next" class="button subtle small">合并下一条 ＋</button><button id="next" class="button subtle small">下一句 →</button></div>
+        <details class="range-details"><summary>调整练习范围 <span id="range-display"></span></summary><div class="details-body">
+          <div class="range-grid"><label>开始（秒）<input id="range-start" type="number" min="0" step="0.1"></label><label>结束（秒）<input id="range-end" type="number" min="0" step="0.1"></label><button id="apply-range" class="button subtle small">应用范围</button></div>
+          <div class="row"><button id="set-a" class="text-button">将当前播放位置设为 A</button><button id="set-b" class="text-button">设为 B</button></div><p class="helper">可合并跨行句子；循环有少量定位误差，不是无缝音频剪辑。</p>
+        </div></details>
+        <section class="practice-block original-block"><div class="block-heading"><span class="round-letter">A</span><div><h3>Original audio</h3><p>先听意群，再听节奏</p></div></div>
+          <div class="row"><button id="play-original" class="button primary">▶ 播放原句</button><button id="loop" class="button subtle" aria-pressed="false">↺ 循环关闭</button><button id="stop-all" class="icon-button" title="停止原声、录音和顺序比较" aria-label="停止播放">■</button></div>
+          <div class="speed-row"><label for="speed">原声倍速</label><select id="speed"><option value="0.5">0.5×</option><option value="0.65">0.65×</option><option value="0.75">0.75×</option><option value="0.85">0.85×</option><option value="1" selected>1.0×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2.0×</option></select><span id="a-duration" class="helper"></span></div>
+        </section>
+        <section class="practice-block recording-block"><div class="block-heading"><span class="round-letter dark">B</span><div><h3>My recording</h3><p>清晰自然，比复制声音更重要</p></div><span id="record-indicator" class="record-indicator">准备就绪</span></div>
+          <div class="row"><button id="record" class="button record-button">● 开始录音</button><button id="stop-record" class="button danger" disabled>■ 停止录音</button><span id="record-time" class="timer">00:00</span></div>
+          <p id="record-help" class="helper">只录麦克风；开始时暂停视频。默认保留最近 5 次；想保留第一遍可点 ☆ 固定。</p>
+          <button id="mic-setup" class="text-button">麦克风无法使用？打开授权页 ↗</button>
+          <button id="independent-workspace" class="text-button">网页阻止麦克风？打开独立练习页 ↗</button>
+          <div id="attempts" class="attempts"></div>
+          <div id="no-attempts" class="small-empty">你的第一遍，就从这里开始。</div>
+          <audio id="my-audio" controls preload="metadata" hidden></audio>
+          <div class="comparison-actions"><button id="compare" class="button primary" disabled>A → B 顺序对比</button><button id="compare-progress" class="button subtle" disabled>最早保留 → 最新</button></div>
+          <p id="comparison-status" class="helper" aria-live="polite">录音后可以无限次回听和对比。不自动评分。</p>
+        </section>
+        <button id="practice-copy" class="button full-width subtle">把这句与录音反馈请求准备到页面卡片 ↗</button>
+      </div>
+    </section>
+    <section id="tutor-view" class="workspace-view" hidden>
+      <div class="section-label">CONTEXT FOR GPT</div><h2 class="tutor-title">选好这一句，直接问。</h2><p class="body-copy">点击下方任务，会在 YouTube 页面的学习卡片里选中完整上下文。右键选择 Ask ChatGPT，使用官方 GPT 侧栏继续问。无需手动复制粘贴；应用不自动发送，也不附加录音。</p>
+      <div id="tutor-target" class="tutor-target">请先在字幕中选择一句。</div>
+      <label for="question" class="field-label">你的问题（可选）</label><textarea id="question" rows="3" placeholder="例如：这里为什么使用这个时态？"></textarea>
+      <div class="prompt-grid"><button class="prompt-card" data-prompt="explain"><span>01 / UNDERSTAND</span><strong>解释这句话 ↗</strong><small>含义、搭配与必要语法</small></button><button class="prompt-card" data-prompt="expressions"><span>02 / NOTICE</span><strong>提取重点表达 ↗</strong><small>区分理解与主动内化</small></button><button class="prompt-card" data-prompt="practice"><span>03 / MAKE IT YOURS</span><strong>让我先尝试 ↗</strong><small>新情境表达，先不看答案</small></button><button class="prompt-card" data-prompt="pronunciation"><span>04 / REFINE</span><strong>录音反馈请求 ↗</strong><small>需另行提供可分析的音频</small></button></div>
+      <button id="copy-backup" class="text-button">备用：复制当前学习上下文</button>
+      <details id="copy-fallback" hidden><summary>无法访问剪贴板，请在这里手动复制</summary><textarea id="copy-text" rows="8" readonly></textarea></details>
+      <div class="tutor-note"><strong>原句有出处，例句有标记。</strong><p>复制内容保留时间戳和前后文，要求 GPT 区分字幕原文与创作例句。只有文字时不能判断你的实际发音；YouTube 链接也不等于已收到原声音频。</p></div>
+    </section>
+    <footer><div><i class="local-dot"></i> 录音不自动上传 · 无 API 费用</div><p>收起页面学习区保留会话；刷新或关闭视频页会丢失录音。<br>页面卡片文字可被网页及获得授权的 GPT 读取，不含音频。<br>YouTube 和你主动使用的 GPT 仍适用各自的数据政策。</p><button id="clear-recordings" class="text-button muted">删除本次会话全部录音</button></footer>
+  </main>
+</body>
+</html>
