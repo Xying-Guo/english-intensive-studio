@@ -5,6 +5,7 @@
   const preview = globalThis.__STUDIO_DOCK_PREVIEW__ === true && ['127.0.0.1', 'localhost'].includes(location.hostname);
   let host, body, frame, fullText, brief, stamp, status, detail, recordBadge, collapseButton, cardArea;
   let layout;
+  let frameStatus, workspaceReady = false;
   const workspaceId = crypto.randomUUID();
   const gate = globalThis.StudioCore.createContextGate(workspaceId);
   const ownOrigin = preview ? location.origin : new URL(chrome.runtime.getURL('')).origin;
@@ -33,7 +34,7 @@
   }
   function clear() {
     if (!host) return;
-    brief.textContent = '在下方字幕中选择一句，“问 GPT”会准备带上下文的学习卡片。';
+    brief.textContent = '选择一句或连续片段，在“内容与表达”中理解观点、学习表达或准备自己的回应。';
     fullText.textContent = ''; stamp.textContent = '尚未选句'; status.textContent = '只展示学习文字，不自动发送。';
     if (recordBadge) recordBadge.textContent = '';
     const selection = window.getSelection();
@@ -71,6 +72,10 @@
       #english-intensive-studio .eis-bar{display:flex;align-items:center;gap:7px;padding:10px;background:#276353;color:#fff;user-select:none;flex-shrink:0}
       #english-intensive-studio .eis-brand{font-size:12px;letter-spacing:.1px;font-weight:650;flex:1;min-width:0}
       #english-intensive-studio .eis-bar button{background:#ffffff20;color:#fff;border:0;border-radius:5px;padding:4px 8px;cursor:pointer;font-size:11px}
+      #english-intensive-studio .eis-workspace-entry{padding:8px 12px;background:#e8efe0;border-bottom:1px solid #cbd9c2;flex-shrink:0}
+      #english-intensive-studio .eis-workspace-entry button{border:0;background:transparent;color:#245344;font-size:12px;font-weight:600;cursor:pointer;padding:0}
+      #english-intensive-studio .eis-frame-status{font-size:11px;line-height:1.5;margin:4px 0 0;color:#5a6e53}
+      #english-intensive-studio.eis-collapsed .eis-workspace-entry{display:none}
       #english-intensive-studio .eis-record-badge{font-size:10px;color:#ffe9ae;white-space:nowrap}
       #english-intensive-studio .eis-body{display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0}
       #english-intensive-studio .eis-card{padding:10px 12px;background:#fffef9;border-bottom:1px solid #dce4d4;color:#273d32;font-size:13px;line-height:1.65;max-height:36%;overflow:auto;flex-shrink:0;overscroll-behavior:contain}
@@ -95,7 +100,7 @@
       #english-intensive-studio .eis-bar button:focus-visible,#english-intensive-studio .eis-select:focus-visible{outline:2px solid #d2e8a6;outline-offset:2px}
       @media(max-width:400px){#english-intensive-studio .eis-brand{font-size:11px}#english-intensive-studio .eis-bar{gap:5px;padding:9px 10px}}`;
     const bar = el('div', '', 'eis-bar');
-    bar.append(el('span', 'Intensive Studio', 'eis-brand'));
+    bar.append(el('span', 'Intensive Studio · v0.4', 'eis-brand'));
     recordBadge = el('span', '', 'eis-record-badge'); bar.append(recordBadge);
     const reset = el('button', '重置', 'eis-reset'); reset.type = 'button'; reset.title = '恢复默认左栏宽度';
     reset.addEventListener('click', resetLayout); bar.append(reset);
@@ -103,9 +108,9 @@
     collapseButton = collapse;
     collapse.addEventListener('click', () => setCollapsed(!body.hidden)); bar.append(collapse);
     body = el('div', '', 'eis-body');
-    const card = el('section', '', 'eis-card'); card.setAttribute('aria-label', '当前精学句 · 给 ChatGPT 的页面上下文');
+    const card = el('section', '', 'eis-card'); card.setAttribute('aria-label', '当前学习片段 · 给 ChatGPT 的页面上下文');
     cardArea = card;
-    const label = el('div', '', 'eis-label'); stamp = el('span', '尚未选句'); label.append(el('strong', 'CURRENT SENTENCE · 当前精学句'), stamp);
+    const label = el('div', '', 'eis-label'); stamp = el('span', '尚未选句'); label.append(el('strong', 'CURRENT PASSAGE · 当前片段'), stamp);
     brief = el('p', '', 'eis-brief');
     const select = el('button', '选中学习卡片 → 右键询问 ChatGPT', 'eis-select'); select.type = 'button';
     select.addEventListener('click', selectContext);
@@ -119,7 +124,26 @@
     frame.src = preview
       ? `/sidepanel.html?preview=1&embeddedPreview=1&workspaceId=${workspaceId}${new URLSearchParams(location.search).has('testRecorder') ? '&testRecorder=1' : ''}`
       : chrome.runtime.getURL(`sidepanel.html?embedded=1&workspaceId=${workspaceId}`);
-    body.append(card, frame); host.append(style, bar, body, el('div', '拖动右侧分隔线调整宽度 · 视频自动让位', 'eis-resize-hint'));
+    const entry = el('div', '', 'eis-workspace-entry');
+    const standalone = el('button', '打开独立学习页 ↗'); standalone.type = 'button';
+    frameStatus = el('p', '内嵌练习区正在加载。空白时可打开独立学习页。', 'eis-frame-status'); frameStatus.setAttribute('role', 'status');
+    standalone.addEventListener('click', async () => {
+      if (preview) { frameStatus.textContent = '这是布局预览。安装后此入口会打开连接当前视频的独立学习页。'; frameStatus.hidden = false; return; }
+      try {
+        const result = await chrome.runtime.sendMessage({ type: 'STUDIO_OPEN_WORKSPACE', workspaceId });
+        if (!result?.ok) throw new Error(result?.error || '请刷新视频页后重试。');
+        frameStatus.textContent = '已打开独立学习页，仍控制这个视频。新页面有独立录音会话。'; frameStatus.hidden = false;
+      } catch (error) { frameStatus.textContent = `打开失败：${error.message}`; frameStatus.hidden = false; }
+    });
+    entry.append(standalone, frameStatus);
+    body.append(card, frame); host.append(style, bar, entry, body, el('div', '拖动右侧分隔线调整宽度 · 视频自动让位', 'eis-resize-hint'));
+    // Report host-page interference without undoing another component's changes.
+    new MutationObserver(() => {
+      if (frame.hasAttribute('srcdoc')) { frameStatus.textContent = '内嵌页面被改写，可能显示空白。请用上方“打开独立学习页”继续。'; frameStatus.hidden = false; }
+    }).observe(frame, { attributes: true, attributeFilter: ['srcdoc'] });
+    setTimeout(() => {
+      if (!workspaceReady && !preview) { frameStatus.textContent = '内嵌练习区尚未就绪。请打开独立学习页，仍可读取字幕和控制当前视频。'; frameStatus.hidden = false; }
+    }, 5000);
     for (const direction of ['e']) {
       const handle = el('div', '', `eis-resize eis-resize-${direction}`);
       handle.tabIndex = 0; handle.setAttribute('role', 'button');
@@ -187,13 +211,14 @@
   if (preview) {
     addEventListener('message', event => {
       if (event.source !== frame?.contentWindow || event.origin !== ownOrigin || event.data?.type !== 'STUDIO_CONTEXT_PREVIEW') return;
-      update(event.data);
+      if (update(event.data)) { workspaceReady = true; if (!frame.hasAttribute('srcdoc')) frameStatus.hidden = true; }
     });
     globalThis.StudioDock.toggle();
   } else {
     chrome.runtime.onMessage.addListener((message, sender, reply) => {
       if (sender.id !== chrome.runtime.id) return;
       if (message?.type === 'STUDIO_TOGGLE') { globalThis.StudioDock.toggle(); reply({ ok: true }); }
+      if (message?.type === 'STUDIO_WORKSPACE_READY' && message.workspaceId === workspaceId) { workspaceReady = true; if (frameStatus && !frame.hasAttribute('srcdoc')) frameStatus.hidden = true; reply({ ok: true }); }
       if (message?.type === 'STUDIO_CONTEXT') reply({ ok: true, data: { updated: update(message) } });
     });
   }

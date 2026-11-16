@@ -16,8 +16,8 @@
   function state() {
     resetIfNeeded();
     const v = getVideo();
-    return { videoId, title: document.querySelector('h1.ytd-watch-metadata yt-formatted-string')?.textContent?.trim()
-      || document.querySelector('h1')?.textContent?.trim() || document.title.replace(/ - YouTube$/, ''),
+    return { videoId, title: originalText(document.querySelector('h1.ytd-watch-metadata yt-formatted-string'))
+      || originalText(document.querySelector('h1')) || document.title.replace(/ - YouTube$/, ''),
       url: videoId ? `https://www.youtube.com/watch?v=${videoId}` : '',
       duration: !isAd() && Number.isFinite(v?.duration) ? v.duration : 0, currentTime: v?.currentTime || 0,
       paused: v?.paused ?? true, rate: v?.playbackRate || 1, muted: v?.muted ?? false,

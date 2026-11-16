@@ -1,5 +1,9 @@
 'use strict';
 const fixtureCallbacks = [];
+const blankFrameButton = document.createElement('button'); blankFrameButton.id = 'fixture-blank-frame';
+blankFrameButton.textContent = '模拟内嵌页被改写';
+blankFrameButton.addEventListener('click', () => { document.querySelector('#english-intensive-studio iframe').srcdoc = ''; });
+document.querySelector('#below').append(blankFrameButton);
 // Local test harness only. Production content.js runs unchanged against real DOM.
 globalThis.chrome = { runtime: { id: 'fixture-only',
   onMessage: { addListener: callback => fixtureCallbacks.push(callback) },

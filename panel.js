@@ -8,12 +8,13 @@
   const pageContext = embedded || embeddedPreview || hostTabId !== null;
   const workspaceId = params.get('workspaceId') || '';
   const producerId = crypto.randomUUID();
-  let contextSeq = 0, contextMode = 'explain', contextChapter = false;
+  let contextSeq = 0, contextMode = 'understand', contextChapter = false;
   if (embedded || embeddedPreview) document.body.classList.add('embedded');
   const audio = $('my-audio');
   const sessions = new Map(), attempts = [];
   let tabId = null, port = null, video = null, session = null, connectionEpoch = 0;
   let selected = [], range = { start: 0, end: 0 }, currentChapter = '', activeIndex = -1;
+  let selectionAnchor = null, readStatus = '尚未读取字幕';
   let pollBusy = false, readBusy = false, revision = 0, loop = false, sequence = null, extensionExpired = false;
   let chosenAttempt = '', recorder = null, stream = null, recordingTarget = null;
   let recordingPending = false, recordingStarted = 0, recordTimer = null, discarded = false;
@@ -59,7 +60,7 @@
     const epoch = ++connectionEpoch;
     if (preview) {
       tabId = 0; adoptVideo(previewVideo); installCues(C.parseTranscript(previewTranscript, previewVideo.duration), '演示字幕（非视频原文）');
-      notice('界面演示：播放时钟为模拟，不连接 YouTube；录音按钮仍需真实麦克风授权。');
+      notice(params.has('testRecorder') ? '界面演示使用模拟视频时钟；录音测试使用合成音，不访问物理麦克风。' : '界面演示：播放时钟为模拟，不连接 YouTube；录音按钮仍需真实麦克风授权。');
       return;
     }
     const bound = embedded ? await chrome.runtime.sendMessage({ type: 'STUDIO_HOST' }) : null;
@@ -86,7 +87,8 @@
     video = state;
     if (changed) {
       cancelAudio(); sequence = null; loop = false;
-      selected = []; activeIndex = -1; chosenAttempt = '';
+      selected = []; selectionAnchor = null; activeIndex = -1; chosenAttempt = '';
+      readStatus = '尚未读取字幕'; $('question').value = ''; resetStudyScope();
       session = getSession(state.videoId);
       $('offset').value = session.offset;
       renderChapters(); renderTranscript(); renderTarget(); renderAttempts();
@@ -103,6 +105,7 @@
     $('video-progress').style.width = `${video?.duration ? Math.min(100, video.currentTime / video.duration * 100) : 0}%`;
     $('extract').disabled = readBusy || !connected || isRecording();
     $('extract').textContent = readBusy ? '正在读取文字稿…' : '读取页面文字稿';
+    $('read-status').textContent = readStatus;
     $('toggle-play').disabled = !connected || isRecording();
     if (connected && document.activeElement !== $('speed')) {
       const value = String(video.rate);
@@ -176,7 +179,8 @@
     session.baseCues = cues.map(c => ({ ...c })); session.offset = 0; $('offset').value = 0;
     const built = C.makeSegments(cues);
     session.cues = built.cues; session.segments = built.segments; session.source = source;
-    selected = []; chosenAttempt = ''; loop = false;
+    selected = []; selectionAnchor = null; chosenAttempt = ''; loop = false; resetStudyScope();
+    readStatus = `已导入 ${built.cues.length} 条字幕 · ${built.segments.length} 个章节`;
     currentChapter = session.segments[0]?.id || '';
     renderChapters(); renderTranscript(); renderTarget(); renderAttempts(); renderVideo();
   }
@@ -184,7 +188,7 @@
     ensureVideo(); ensureNotRecording();
     if (readBusy) return;
     await stopPlayback();
-    readBusy = true; renderVideo();
+    readBusy = true; readStatus = '正在打开并读取文字稿，请稍候…'; renderVideo();
     const expectedId = video.videoId, expectedEpoch = connectionEpoch;
     notice('正在读取当前页面文字稿；若尚未打开，插件会尝试展开。');
     try {
@@ -195,6 +199,9 @@
       if (latest.videoId !== expectedId) throw new Error('读取期间视频已切换，未采用旧字幕。');
       installCues(result.cues, result.source);
       notice(`已读取 ${result.cues.length} 条字幕。\n${result.warnings.join('\n')}`);
+    } catch (error) {
+      readStatus = `读取未完成：${error.message}`;
+      throw error;
     } finally { readBusy = false; renderVideo(); }
   }
   function renderChapters() {
@@ -230,8 +237,11 @@
       const ordinal = document.createElement('span'); ordinal.className = 'cue-index'; ordinal.textContent = `#${String(index + 1).padStart(3, '0')}${selected.includes(index) ? ' · 已选中' : ''}`;
       top.append(stamp, ordinal);
       const text = document.createElement('button'); text.className = 'cue-text'; text.textContent = cue.text;
-      text.addEventListener('click', guarded(() => choose(index, 'seek')));
+      text.addEventListener('click', guarded(event => event.shiftKey && selected.length ? choosePassage(index) : choose(index, 'seek')));
       const actions = document.createElement('div'); actions.className = 'cue-actions';
+      const extend = document.createElement('button'); extend.textContent = selected.length ? '选到这里' : '从这里选';
+      extend.setAttribute('aria-label', `${selected.length ? '将片段终点设为' : '从此处开始选择片段'} ${C.formatTime(cue.startTime)}`);
+      extend.addEventListener('click', guarded(() => choosePassage(index))); actions.append(extend);
       for (const [title, mode] of [['↺ 单句循环', 'loop'], ['● 录音跟练', 'practice'], ['问 GPT ↗', 'tutor']]) {
         const button = document.createElement('button'); button.textContent = title;
         button.addEventListener('click', guarded(() => choose(index, mode))); actions.append(button);
@@ -240,18 +250,53 @@
     });
     list.append(fragment);
     if (cues.length && !list.children.length) { const empty = document.createElement('p'); empty.className = 'search-empty'; empty.textContent = '本章没有匹配的字幕。'; list.append(empty); }
+    renderTutorTarget();
   }
   async function choose(index, mode = 'practice') {
     ensureNotRecording();
     const cue = session?.cues[index]; if (!cue) return;
     await stopPlayback();
-    selected = [index]; range = { start: cue.startTime, end: cue.endTime }; chosenAttempt = '';
+    selected = [index]; selectionAnchor = index; range = { start: cue.startTime, end: cue.endTime }; chosenAttempt = ''; resetStudyScope();
+    $('follow').checked = false;
     currentChapter = cue.segmentId; $('chapter').value = currentChapter;
     renderTarget(); renderTranscript(); renderAttempts();
     if (mode === 'seek') await control('seek', { time: cue.startTime, play: false });
     if (mode === 'loop') { showTab('practice'); loop = true; renderLoop(); await playOriginal(); }
     if (mode === 'practice') { showTab('practice'); await control('pause'); }
-    if (mode === 'tutor') { showTab('tutor'); await prepareContext('explain'); }
+    if (mode === 'tutor') { showTab('tutor'); await prepareContext('understand'); }
+  }
+  async function choosePassage(index) {
+    ensureNotRecording();
+    if (!selected.length || selectionAnchor === null) return choose(index, 'select');
+    const passage = C.selectPassage(session.cues, selectionAnchor, index);
+    await stopPlayback();
+    selected = passage.indices; range = passage.range; chosenAttempt = ''; resetStudyScope();
+    $('follow').checked = false;
+    currentChapter = session.cues[index].segmentId; $('chapter').value = currentChapter;
+    renderTarget(); renderTranscript(); renderAttempts();
+  }
+  function resetStudyScope() {
+    contextChapter = false; contextMode = 'understand';
+    $('learning-scope').value = 'selection'; $('task-status').textContent = '选好范围，再选择一个任务。';
+  }
+  function learningMaterial(chapter = $('learning-scope').value === 'chapter') {
+    if (!chapter) return { selection: selected, bounds: range, scope: 'selection' };
+    const segment = session?.segments.find(s => s.id === currentChapter);
+    if (!segment) return { selection: [], bounds: { start: 0, end: 0 }, scope: 'chapter' };
+    return { selection: Array.from({ length: segment.count }, (_, i) => segment.firstIndex + i),
+      bounds: { start: segment.startTime, end: segment.endTime }, scope: 'chapter' };
+  }
+  function materialLabel(selection, bounds, scope) {
+    return `${scope === 'chapter' ? '当前章节' : selection.length === 1 ? '单句' : '连续片段'} · ${C.formatTime(bounds.start)}–${C.formatTime(bounds.end)} · ${selection.length} 条字幕`;
+  }
+  function renderTutorTarget() {
+    const { selection, bounds, scope } = learningMaterial();
+    const exists = !!selection.length;
+    const text = selection.map(i => session.cues[i].text).join(' ');
+    $('tutor-range').textContent = exists ? materialLabel(selection, bounds, scope) : '尚未选择学习范围';
+    $('tutor-target').textContent = exists ? text : scope === 'chapter' ? '请先读取字幕。' : '请先在字幕中选择一句或连续片段，也可以切换到当前章节。';
+    for (const button of document.querySelectorAll('[data-prompt]')) button.disabled = !exists || isRecording();
+    $('copy-backup').disabled = !exists;
   }
   function showTab(name) {
     for (const item of document.querySelectorAll('[data-tab]')) {
@@ -260,12 +305,16 @@
     for (const view of ['transcript', 'practice', 'tutor']) $(`${view}-view`).hidden = view !== name;
   }
   function renderTarget() {
-    contextChapter = false;
+    contextChapter = $('learning-scope').value === 'chapter';
     const exists = selected.length > 0 && !!session?.cues.length;
     $('practice-empty').hidden = exists; $('practice-content').hidden = !exists;
     const text = exists ? selected.map(i => session.cues[i].text).join(' ') : '';
     $('target-text').textContent = text;
-    $('tutor-target').textContent = text || '请先在字幕中选择一句。';
+    $('selection-summary').hidden = !exists;
+    $('selection-label').textContent = exists ? materialLabel(selected, range, 'selection') : '';
+    $('selection-preview').textContent = text.length > 240 ? `${text.slice(0, 240)}…` : text;
+    for (const id of ['selection-clear', 'selection-play', 'selection-discuss']) $(id).disabled = !exists || isRecording();
+    renderTutorTarget();
     $('range-start').value = range.start.toFixed(3); $('range-end').value = range.end.toFixed(3);
     $('range-display').textContent = `${C.formatTime(range.start, true)} → ${C.formatTime(range.end, true)}`;
     $('a-duration').textContent = exists ? `范围 ${(range.end - range.start).toFixed(1)} 秒` : '';
@@ -278,15 +327,9 @@
     if (!pageContext || !video?.videoId) return;
     contextMode = mode;
     contextChapter = chapter;
-    let selection = selected, bounds = range;
-    if (chapter) {
-      const segment = session.segments.find(s => s.id === currentChapter);
-      if (!segment) throw new Error('请先读取字幕。');
-      selection = Array.from({ length: segment.count }, (_, i) => segment.firstIndex + i);
-      bounds = { start: segment.startTime, end: segment.endTime };
-    }
+    const { selection, bounds, scope } = learningMaterial(chapter);
     const context = selection.length ? {
-      prompt: C.buildPrompt({ video, cues: session.cues, selected: selection, range: bounds, mode, question: $('question').value.trim() }),
+      prompt: C.buildPrompt({ video, cues: session.cues, selected: selection, range: bounds, mode, scope, question: $('question').value.trim() }),
       text: selection.map(i => session.cues[i].text).join(' '),
       start: C.formatTime(bounds.start, true), end: C.formatTime(bounds.end, true)
     } : null;
@@ -297,11 +340,18 @@
       if (select && !result?.updated) throw new Error('页面学习卡片没有更新。请刷新 YouTube 后重新打开本插件。');
     }
   }
-  async function prepareContext(mode, chapter = false) {
+  async function prepareContext(mode, chapter = $('learning-scope').value === 'chapter') {
+    ensureVideo();
+    const material = learningMaterial(chapter);
+    if (!material.selection.length) throw new Error(chapter ? '请先读取字幕。' : '请先选择一句或连续片段。');
+    contextMode = mode; contextChapter = chapter;
+    const names = { understand: '理解与讨论', expressions: '学习表达', respond: '我来说', pronunciation: '录音反馈请求' };
+    $('task-status').textContent = `准备：${names[mode] || names.understand} · ${materialLabel(material.selection, material.bounds, material.scope)}`;
+    if (chapter) $('follow').checked = false;
     if (!pageContext) { await copyPrompt(mode, chapter); return; }
     if (!chapter) ensureSelection();
     await publishContext(mode, true, chapter);
-    notice('学习上下文已在 YouTube 页面选中。请在选中文字上右键 → Ask ChatGPT；这里没有自动发送，也没有附加录音。');
+    notice('任务与上下文已在 YouTube 页面卡片中选中。回到视频页，在选中文字上右键 → Ask ChatGPT。也可使用备用复制；没有自动发送或附加录音。');
   }
   function renderLoop() { $('loop').setAttribute('aria-pressed', loop); $('loop').textContent = loop ? '↺ 循环开启' : '↺ 循环关闭'; }
   function cancelAudio() {
@@ -415,8 +465,8 @@
     $('stop-record').disabled = !busy;
     $('record-indicator').textContent = recordingPending ? '等待麦克风授权' : busy ? '正在录音' : '准备就绪';
     $('record-indicator').classList.toggle('live', busy && !recordingPending);
-    for (const id of ['play-original', 'loop', 'speed', 'apply-range', 'set-a', 'set-b', 'merge-next', 'next', 'previous', 'apply-offset', 'import-text', 'subtitle-file', 'connect']) $(id).disabled = busy;
-    renderVideo(); renderAttempts();
+    for (const id of ['play-original', 'loop', 'speed', 'apply-range', 'set-a', 'set-b', 'merge-next', 'next', 'previous', 'apply-offset', 'import-text', 'subtitle-file', 'connect', 'learning-scope', 'selection-clear', 'selection-play', 'selection-discuss', 'chapter-copy']) $(id).disabled = busy;
+    renderVideo(); renderAttempts(); renderTarget();
     publishContext().catch(() => {});
   }
   async function startRecording() {
@@ -484,14 +534,8 @@
   }
   async function copyPrompt(mode, chapter = false) {
     ensureVideo();
-    let selection = selected, bounds = range;
-    if (chapter) {
-      const segment = session.segments.find(s => s.id === currentChapter);
-      if (!segment) throw new Error('请先读取字幕。');
-      selection = Array.from({ length: segment.count }, (_, i) => segment.firstIndex + i);
-      bounds = { start: segment.startTime, end: segment.endTime };
-    }
-    const text = C.buildPrompt({ video, cues: session.cues, selected: selection, range: bounds, mode, question: $('question').value.trim() });
+    const { selection, bounds, scope } = learningMaterial(chapter);
+    const text = C.buildPrompt({ video, cues: session.cues, selected: selection, range: bounds, mode, scope, question: $('question').value.trim() });
     try { await navigator.clipboard.writeText(text); notice('已复制原文、时间戳、前后文与任务。请自行粘贴到 GPT；应用没有发送任何内容。'); }
     catch { $('copy-fallback').hidden = false; $('copy-fallback').open = true; $('copy-text').value = text; showTab('tutor'); $('copy-text').focus(); $('copy-text').select(); notice('浏览器未允许直接复制，已展开可手动复制的内容。'); }
   }
@@ -505,7 +549,8 @@
     else { await stopPlayback(); await control('seek', { time: state.currentTime, play: true }); }
   }));
   for (const button of document.querySelectorAll('[data-tab]')) button.addEventListener('click', () => showTab(button.dataset.tab));
-  $('chapter').addEventListener('change', () => { currentChapter = $('chapter').value; $('follow').checked = false; renderTranscript(); });
+  $('chapter').addEventListener('change', () => { currentChapter = $('chapter').value; $('follow').checked = false; renderTranscript(); if (contextChapter) publishContext().catch(() => {}); });
+  $('learning-scope').addEventListener('change', () => { contextChapter = $('learning-scope').value === 'chapter'; $('follow').checked = false; renderTutorTarget(); publishContext().catch(() => {}); });
   $('search').addEventListener('input', () => { $('follow').checked = false; renderTranscript(); });
   $('import-text').addEventListener('click', guarded(async () => { ensureNotRecording(); await stopPlayback(); installCues(C.parseTranscript($('transcript-input').value, video?.duration || 0), '手工粘贴文字稿'); $('import-details').open = false; notice('文字稿已导入。请点击一条字幕核对时间是否与视频一致。'); }));
   $('subtitle-file').addEventListener('change', guarded(async () => {
@@ -528,16 +573,15 @@
     await stopPlayback();
     const built = C.makeSegments(session.baseCues.map(c => ({ ...c, startTime: c.startTime + offset, endTime: c.endTime + offset })));
     session.cues = built.cues; session.segments = built.segments; session.offset = offset;
-    selected = []; renderChapters(); renderTranscript(); renderTarget(); renderAttempts(); renderVideo(); notice('字幕偏移已应用。请重新选句核对。');
+    selected = []; selectionAnchor = null; resetStudyScope(); renderChapters(); renderTranscript(); renderTarget(); renderAttempts(); renderVideo(); notice('字幕偏移已应用。请重新选句核对。');
   }));
   $('back-to-transcript').addEventListener('click', () => showTab('transcript'));
   $('previous').addEventListener('click', guarded(() => choose(selected[0] - 1)));
   $('next').addEventListener('click', guarded(() => choose(selected.at(-1) + 1)));
   $('merge-next').addEventListener('click', guarded(async () => {
-    ensureNotRecording(); ensureSelection(); if (selected.length >= 8) throw new Error('单次最多合并 8 条字幕，建议分成较短意群练习。');
+    ensureNotRecording(); ensureSelection();
     const index = selected.at(-1) + 1; if (!session.cues[index]) return;
-    await stopPlayback(); selected.push(index); range.end = session.cues[index].endTime; chosenAttempt = '';
-    renderTarget(); renderTranscript(); renderAttempts();
+    selectionAnchor = selected[0]; await choosePassage(index);
   }));
   $('apply-range').addEventListener('click', guarded(async () => {
     ensureNotRecording(); ensureSelection();
@@ -558,11 +602,17 @@
   $('stop-record').addEventListener('click', stopRecording);
   $('compare').addEventListener('click', guarded(compare));
   $('compare-progress').addEventListener('click', guarded(compareProgress));
-  $('practice-copy').addEventListener('click', guarded(() => prepareContext('pronunciation')));
-  $('chapter-copy').addEventListener('click', guarded(() => prepareContext('expressions', true)));
+  $('selection-play').addEventListener('click', guarded(playOriginal));
+  $('selection-discuss').addEventListener('click', guarded(() => { $('learning-scope').value = 'selection'; contextChapter = false; showTab('tutor'); renderTutorTarget(); }));
+  $('selection-clear').addEventListener('click', guarded(async () => {
+    ensureNotRecording(); await stopPlayback(); selected = []; selectionAnchor = null; chosenAttempt = ''; range = { start: 0, end: 0 }; resetStudyScope();
+    renderTarget(); renderTranscript(); renderAttempts();
+  }));
+  $('practice-copy').addEventListener('click', guarded(() => { $('learning-scope').value = 'selection'; renderTutorTarget(); return prepareContext('pronunciation', false); }));
+  $('chapter-copy').addEventListener('click', guarded(() => { $('learning-scope').value = 'chapter'; contextChapter = true; showTab('tutor'); renderTutorTarget(); return prepareContext('understand', true); }));
   for (const button of document.querySelectorAll('[data-prompt]')) button.addEventListener('click', guarded(() => prepareContext(button.dataset.prompt)));
   $('question').addEventListener('input', () => publishContext().catch(() => {}));
-  $('copy-backup').addEventListener('click', guarded(() => copyPrompt(contextMode)));
+  $('copy-backup').addEventListener('click', guarded(() => copyPrompt(contextMode, contextChapter)));
   $('independent-workspace').addEventListener('click', guarded(async () => {
     ensureNotRecording(); ensureVideo();
     if (preview) { notice('独立练习窗口只在安装后的插件中可用。'); return; }
@@ -612,5 +662,6 @@
     }, 100);
   }
   setInterval(poll, 350);
+  if (embedded) chrome.runtime.sendMessage({ type: 'STUDIO_WORKSPACE_READY', workspaceId }).catch(() => {});
   guarded(connect)();
 })();
