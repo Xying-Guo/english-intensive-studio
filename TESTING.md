@@ -1,5 +1,15 @@
 # 验证记录 · 2026-10-25
 
+## v0.3.2 文字稿消失与新版字幕兼容 · 2026-11-15
+
+- 用户真实 YouTube 页 `EF-nBNW6y5c` 的只读检查确认：新版有 944 个 `transcript-segment-view-model`，旧版 `ytd-transcript-segment-renderer` 为零。字幕所在的展开面板 target-id 为章节面板，不能只按 target-id 包含 transcript 过滤。
+- 旧布局隐藏整个 `#secondary`，连带隐藏原生文字稿；同时为未承载播放器的空容器强制设置 16:9，造成额外视频高度。修复为只隐藏 `#related`，保留原生面板在视频下方，只为包含 `#movie_player` 的容器分配视频比例。
+- 新读取器兼容旧、新字幕节点，优先读实际展开且包含字幕行的面板；克隆原句节点后排除翻译插件的译文节点，不修改用户页面中的翻译。
+- Chrome 本地真实 DOM 回归：生产 `content.js` 不变，使用只在测试页加载的消息桩。在普通、新宽屏、旧版字幕三个场景中均读到三条创作例句，时间为 0、4、9 秒；没有混入中文翻译或隐藏面板的旧字幕。
+- 普通布局空的全宽容器为 display:none，视频文档顶部约 72px；宽屏布局空的普通容器为 display:none，视频文档顶部约 56px。原生文字稿可见，无横向溢出。
+- `npm test` 17 项通过；`npm run check` 通过。以上本地回归不等于正式扩展通路已验证；仍等待重新加载 v0.3.2 后核对用户真实视频。
+- 本地复现地址：启动 `npm run preview`，打开 `/watch?v=fixture&layout=normal`、`layout=wide` 或 `layout=normal&legacy=1`，点击“读取示例文字稿（生产读取器）”。示例不是原视频字幕，测试页不会申请麦克风。
+
 ## v0.3.1 扩展重载后的连接失效处理
 
 - 用户报告 `Uncaught Error: Extension context invalidated.`；同时真实视频页仍显示旧版浮窗，未载入新左栏标记。与扩展重载后旧页面连接失效一致，不能从此断言还有其他异常。

@@ -24,17 +24,26 @@
       ad: isAd(), range: range ? { ...range } : null, extracting };
   }
   // We read rendered transcript DOM, not undocumented caption URLs or page-internal tokens.
-  function transcriptRows() {
-    const panels = [...document.querySelectorAll('ytd-engagement-panel-section-list-renderer')]
-      .filter(el => (el.getAttribute('target-id') || '').includes('transcript'));
-    const populated = panels.filter(el => el.querySelector('ytd-transcript-segment-renderer'));
+  const rowSelector = 'ytd-transcript-segment-renderer, transcript-segment-view-model';
+  function transcriptScope() {
+    const populated = [...document.querySelectorAll('ytd-engagement-panel-section-list-renderer')]
+      .filter(el => el.querySelector(rowSelector));
     const visible = populated.find(el => el.getAttribute('visibility') === 'ENGAGEMENT_PANEL_VISIBILITY_EXPANDED')
       || populated.find(el => el.getBoundingClientRect().height > 0);
-    const scope = visible || document;
-    const rows = [...scope.querySelectorAll('ytd-transcript-segment-renderer')];
+    return visible || populated[0] || document;
+  }
+  function originalText(node) {
+    if (!node) return '';
+    const copy = node.cloneNode(true);
+    // Third-party translations are annotations, not the spoken source caption.
+    copy.querySelectorAll('.immersive-translate-target-wrapper, [data-immersive-translate-translation-element-mark], .immersive-translate-target-translation-block-wrapper').forEach(el => el.remove());
+    return copy.textContent.trim();
+  }
+  function transcriptRows() {
+    const rows = [...transcriptScope().querySelectorAll(rowSelector)];
     return rows.map(el => ({
-      startTime: el.querySelector('.segment-timestamp')?.textContent?.trim(),
-      text: el.querySelector('.segment-text')?.textContent?.trim()
+      startTime: el.querySelector('.segment-timestamp, .ytwTranscriptSegmentViewModelTimestamp')?.textContent?.trim(),
+      text: originalText(el.querySelector('.segment-text, span.ytAttributedStringHost[role="text"]'))
     })).filter(row => Number.isFinite(C.parseTime(row.startTime)) && row.text);
   }
   async function extract() {
@@ -67,7 +76,7 @@
       const video = getVideo();
       const duration = Number.isFinite(video?.duration) && !isAd() ? video.duration : 0;
       const cues = C.makeSegments(C.normalizeCues(rows, duration)).cues;
-      const panel = document.querySelector('ytd-transcript-renderer');
+      const panel = transcriptScope();
       const language = panel?.querySelector('#footer')?.textContent?.trim() || '';
       const search = panel?.querySelector('input');
       const warnings = ['来自页面文字稿；终点按下一条字幕推算，可微调。请核对字幕语言与原声音轨。'];

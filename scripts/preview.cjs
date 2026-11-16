@@ -7,7 +7,7 @@ const port = Number(process.env.STUDIO_PREVIEW_PORT || 4173);
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8' };
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
-  const relative = pathname === '/' ? '/sidepanel.html' : pathname;
+  const relative = pathname === '/' ? '/sidepanel.html' : pathname === '/watch' ? '/tests/layout-fixture.html' : pathname;
   const target = path.resolve(root, '.' + relative);
   if (!target.startsWith(root + path.sep) || !['.html', '.js', '.css', '.json'].includes(path.extname(target))) {
     res.writeHead(403); res.end('Forbidden'); return;

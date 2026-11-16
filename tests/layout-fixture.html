@@ -1,1 +1,25 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>左栏与播放器布局检查</title><link rel="stylesheet" href="layout-fixture.css"><script src="../core.js" defer></script><script src="../preview.js" defer></script><script src="layout-fixture.js" defer></script><script src="../dock.js" defer></script></head><body><ytd-app><ytd-masthead>布局检查 · 合成页面，不是真实 YouTube 或 GPT</ytd-masthead><ytd-watch-flexy><div id="player-full-bleed-container"><div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" style="width:889px;height:500px;left:0;top:2px"></video><div class="fixture-title">视频区域<br><small>模拟播放器原本带有固定宽度和高度</small></div></div><div class="ytp-chrome-bottom">▶ ━━━━━━━━━━━━━</div></div></div><div id="columns"><div id="primary"><div id="primary-inner"><div id="player"><div id="player-container-outer"><div id="player-container-inner"></div></div></div><h1>左侧精学，视频在剩余区域居中。</h1><p>拖动左栏分隔线，检查视频区域是否跟随缩放；收起后应恢复更多视频空间。</p><p>测试场景：<a href="?layout=wide">宽屏播放器结构</a> · <a href="?layout=normal">普通播放器结构</a></p><p id="fixture-mode"></p></div></div><div id="secondary">模拟推荐视频区域</div></div></ytd-watch-flexy></ytd-app></body></html>
+<!doctype html><html lang="zh-CN"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>左栏与新版文字稿回归检查</title><link rel="stylesheet" href="/tests/layout-fixture.css">
+<script src="/core.js" defer></script><script src="/preview.js" defer></script>
+<script src="/tests/layout-fixture.js" defer></script><script src="/content.js" defer></script><script src="/dock.js" defer></script>
+</head><body><ytd-app><ytd-masthead>布局检查 · 合成页面，不是真实 YouTube 或 GPT</ytd-masthead>
+<ytd-watch-flexy><div id="full-bleed-container"><div id="player-full-bleed-container">
+<div class="player-container-background">空容器不能占据视频高度</div>
+<div id="movie_player"><div class="html5-video-container"><video class="html5-main-video" style="width:889px;height:500px;left:0;top:2px"></video>
+<div class="fixture-title">视频区域<br><small>模拟固定尺寸和空背景容器</small></div></div><div class="ytp-chrome-bottom">▶ ━━━━━━━━━━━━━</div></div></div></div>
+<div id="columns"><div id="primary"><div id="primary-inner"><div id="player"><div id="player-container-outer"><div id="player-container-inner"></div></div></div>
+<h1>左侧精学，保留视频和原生文字稿</h1>
+<p><a href="/watch?v=fixture&layout=wide">宽屏结构</a> · <a href="/watch?v=fixture&layout=normal">普通结构</a> · <a href="/watch?v=fixture&layout=normal&legacy=1">旧版字幕</a></p>
+<p id="fixture-mode"></p><button id="fixture-read">读取示例文字稿（生产读取器）</button><pre id="fixture-result" role="status">尚未读取</pre>
+</div></div><div id="secondary"><div id="secondary-inner"><div id="panels">
+<ytd-engagement-panel-section-list-renderer target-id="engagement-panel-macro-markers-description-chapters" visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED">
+<h2>原生文字稿 · 创作示例</h2><input aria-label="搜索转写内容" value="">
+<transcript-segment-view-model><div class="ytwTranscriptSegmentViewModelTimestamp">0:00</div><span class="ytAttributedStringHost" role="text">Let us examine the evidence.<font class="immersive-translate-target-wrapper">让我们检查证据。</font></span></transcript-segment-view-model>
+<transcript-segment-view-model><div class="ytwTranscriptSegmentViewModelTimestamp">0:04</div><span class="ytAttributedStringHost" role="text">What would change your mind?<font data-immersive-translate-translation-element-mark="1">什么会让你改变看法？</font></span></transcript-segment-view-model>
+<transcript-segment-view-model><div class="ytwTranscriptSegmentViewModelTimestamp">0:09</div><span class="ytAttributedStringHost" role="text">We can test that assumption.</span></transcript-segment-view-model>
+</ytd-engagement-panel-section-list-renderer>
+<ytd-engagement-panel-section-list-renderer target-id="engagement-panel-searchable-transcript" visibility="ENGAGEMENT_PANEL_VISIBILITY_HIDDEN" hidden>
+<ytd-transcript-segment-renderer><div class="segment-timestamp">0:00</div><div class="segment-text">Hidden stale caption must not be imported.</div></ytd-transcript-segment-renderer>
+</ytd-engagement-panel-section-list-renderer>
+</div><div id="related">模拟推荐视频区域（仅此区域隐藏）</div></div></div></div></ytd-watch-flexy></ytd-app></body></html>
