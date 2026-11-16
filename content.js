@@ -46,6 +46,13 @@
       text: originalText(el.querySelector('.segment-text, span.ytAttributedStringHost[role="text"]'))
     })).filter(row => Number.isFinite(C.parseTime(row.startTime)) && row.text);
   }
+  function transcriptButton() {
+    const label = /^(show transcript|内容转文字|轉寫文稿|转写文稿|顯示轉錄稿|显示文字稿|顯示文字稿|显示转写文稿)$/i;
+    return [...document.querySelectorAll('button, ytd-button-renderer, [role="tab"]')].find(el => {
+      if (el.closest('#english-intensive-studio') || el.disabled || !el.getBoundingClientRect().width) return false;
+      return [el.getAttribute('aria-label') || '', originalText(el)].some(text => label.test(text.trim()));
+    });
+  }
   async function extract() {
     resetIfNeeded();
     if (!videoId) throw new Error('请打开 YouTube 的普通视频页面（/watch），暂不支持 Shorts 和直播。');
@@ -53,23 +60,25 @@
     if (extracting) throw new Error('正在读取文字稿，请稍候。');
     extracting = true;
     const original = videoId, epoch = extractionEpoch;
+    const pagePosition = { left: window.scrollX, top: window.scrollY };
+    let opened = false;
     try {
       let rows = transcriptRows();
       if (!rows.length) {
-        const buttons = [...document.querySelectorAll('button, ytd-button-renderer')];
-        const open = buttons.find(el => /^(show transcript|内容转文字|顯示轉錄稿|显示文字稿|顯示文字稿|显示转写文稿)$/i.test(el.textContent.trim()));
-        if (open) open.click();
+        const open = transcriptButton();
+        if (open) { open.click(); opened = true; }
         else {
           document.querySelector('#description-inline-expander #expand, #description #expand')?.click();
-          await sleep(400);
-          const retry = [...document.querySelectorAll('button, ytd-button-renderer')].find(el => /^(show transcript|内容转文字|顯示轉錄稿|显示文字稿|顯示文字稿|显示转写文稿)$/i.test(el.textContent.trim()));
-          retry?.click();
         }
       }
       for (let i = 0; i < 24; i++) {
         if (currentId() !== original || extractionEpoch !== epoch) throw new Error('视频已切换，请重新读取新视频文字稿。');
         rows = transcriptRows();
         if (rows.length) break;
+        if (!opened) {
+          const open = transcriptButton();
+          if (open) { open.click(); opened = true; }
+        }
         await sleep(300);
       }
       if (!rows.length) throw new Error('未读到文字稿。请在 YouTube 手动打开“转写文稿”，清空字幕搜索，再重试；也可以粘贴或导入字幕。');
@@ -84,7 +93,11 @@
       if (cues[0]?.startTime > 15) warnings.push('首条字幕不在视频开头，可能是部分文字稿。');
       if (duration && cues.at(-1)?.startTime < duration * 0.85) warnings.push('字幕末尾距离视频结束较远，请检查是否完整。');
       return { videoId: original, cues, language, source: 'YouTube 页面文字稿', warnings };
-    } finally { extracting = false; }
+    } finally {
+      extracting = false;
+      // Opening YouTube's panel can scroll to metadata/comments. Keep the study position.
+      if (currentId() === original && extractionEpoch === epoch) window.scrollTo(pagePosition);
+    }
   }
   async function command(message) {
     resetIfNeeded();

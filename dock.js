@@ -47,11 +47,15 @@
     const style = el('style');
     style.textContent = `
       html.eis-left-layout ytd-watch-flexy{box-sizing:border-box!important;margin-left:var(--eis-left-space)!important;width:calc(100% - var(--eis-left-space))!important;min-width:0!important;max-width:none!important}
-      html.eis-left-layout ytd-watch-flexy #columns{box-sizing:border-box!important;display:block!important;width:100%!important;min-width:0!important;max-width:1280px!important;padding:16px!important;margin:0 auto!important}
+      html.eis-left-layout ytd-watch-flexy #columns{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;width:100%!important;min-width:0!important;max-width:1280px!important;padding:16px!important;margin:0 auto!important}
       html.eis-left-layout ytd-watch-flexy #primary{box-sizing:border-box!important;min-width:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
       html.eis-left-layout ytd-watch-flexy #primary-inner{width:100%!important;min-width:0!important;max-width:none!important}
+      html.eis-left-layout ytd-watch-flexy #primary,html.eis-left-layout ytd-watch-flexy #primary-inner{display:contents!important}
+      html.eis-left-layout ytd-watch-flexy #below{order:2;min-width:0;width:100%;overflow-x:clip}
+      html.eis-left-layout ytd-watch-flexy #cinematics-container{display:none!important}
       html.eis-left-layout ytd-watch-flexy #secondary{box-sizing:border-box!important;display:block!important;width:100%!important;min-width:0!important;max-width:none!important;margin:16px 0 0!important;padding:0!important}
-      html.eis-left-layout ytd-watch-flexy #secondary-inner{width:100%!important;min-width:0!important}
+      html.eis-left-layout ytd-watch-flexy #secondary{order:1}
+      html.eis-left-layout ytd-watch-flexy #secondary-inner,html.eis-left-layout ytd-watch-flexy #panels{width:100%!important;min-width:0!important}
       html.eis-left-layout ytd-watch-flexy #related{display:none!important}
       html.eis-left-layout ytd-watch-flexy #full-bleed-container:not(:has(#movie_player)),html.eis-left-layout ytd-watch-flexy #player:not(:has(#movie_player)){display:none!important}
       html.eis-left-layout ytd-watch-flexy #player:has(#movie_player),html.eis-left-layout ytd-watch-flexy #player-full-bleed-container:has(#movie_player){box-sizing:border-box!important;position:relative!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;aspect-ratio:16/9!important;margin:0 auto!important}

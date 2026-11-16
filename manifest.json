@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "English Intensive Studio · 英语精学",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "在 YouTube 边看边精听：时间戳字幕、逐句循环、录音 A/B 对比，以及复制上下文给 GPT。录音不自动上传。",
   "minimum_chrome_version": "116",
   "permissions": ["scripting"],

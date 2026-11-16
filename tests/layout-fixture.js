@@ -10,6 +10,22 @@ document.getElementById('fixture-read').addEventListener('click', () => {
     document.getElementById('fixture-result').textContent = JSON.stringify(result, null, 2);
   });
 });
+if (new URLSearchParams(location.search).has('auto')) {
+  const panel = document.querySelector('[visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
+  panel.remove();
+  document.querySelector('[visibility="ENGAGEMENT_PANEL_VISIBILITY_HIDDEN"]').remove();
+  document.querySelector('#expand').addEventListener('click', () => setTimeout(() => {
+    const button = document.createElement('button'); button.setAttribute('aria-label', 'Show transcript');
+    button.append('Show transcript');
+    const translation = document.createElement('font');
+    translation.className = 'immersive-translate-target-wrapper'; translation.textContent = '显示文字稿';
+    button.append(translation);
+    button.addEventListener('click', () => {
+      document.querySelector('#panels').append(panel); window.scrollTo({ top: 600 });
+    });
+    document.querySelector('#description').append(button);
+  }, 650), { once: true });
+}
 if (new URLSearchParams(location.search).has('legacy')) {
   document.querySelectorAll('transcript-segment-view-model').forEach(row => {
     const legacy = document.createElement('ytd-transcript-segment-renderer');
