@@ -47,9 +47,10 @@
       <div class="chapter-heading"><label for="chapter" class="section-label">章节导航</label><button id="chapter-copy" class="text-button">讨论本章 ↗</button></div>
       <select id="chapter" aria-label="选择约五分钟章节"><option value="">读取字幕后生成章节</option></select>
       <div class="transcript-toolbar"><input id="search" type="search" aria-label="搜索当前章节字幕" placeholder="搜索当前章节…"><label class="follow-label"><input id="follow" type="checkbox" checked> 跟随播放</label></div>
+      <div class="follow-controls"><span id="follow-status" class="helper">跟随播放已开启</span><button id="follow-current" class="text-button" disabled>回到当前句</button></div>
       <p class="helper selection-instructions">点击一句确定起点，再点另一句的“选到这里”，组成完整片段。约五分钟章节只用于导航，不会强制打断播放。</p>
       <div id="transcript-empty" class="empty-state"><div class="empty-symbol" aria-hidden="true">“ ”</div><h3>先听一小段，再学深一点。</h3><p>读取或导入字幕后，点击原句定位。<br>每句都可以循环、展开跟练。</p></div>
-      <div id="transcript-list" class="transcript-list" aria-label="带时间戳字幕"></div>
+      <div id="transcript-list" class="transcript-list" aria-label="带时间戳字幕" tabindex="0"></div>
       <p id="transcript-footnote" class="helper" hidden>原文来自字幕，可能包含识别错误。选中句和播放中句分别显示。</p>
     </section>
     <section id="practice-view" class="workspace-view" hidden>
@@ -94,5 +95,14 @@
     </section>
     <footer><div><i class="local-dot"></i> 录音不自动上传 · 无 API 费用</div><p>收起页面学习区保留会话；刷新或关闭视频页会丢失录音。<br>页面卡片文字可被网页及获得授权的 GPT 读取，不含音频。<br>YouTube 和你主动使用的 GPT 仍适用各自的数据政策。</p><button id="clear-recordings" class="text-button muted">删除本次会话全部录音</button></footer>
   </main>
+  <section id="quick-tutor" class="quick-tutor" role="dialog" aria-labelledby="quick-title" hidden>
+    <div class="quick-heading"><strong id="quick-title">问 GPT · 当前句子</strong><button id="quick-close" class="text-button" aria-label="关闭原位提问">关闭 ×</button></div>
+    <p id="quick-stamp" class="selection-label"></p><blockquote id="quick-quote"></blockquote>
+    <label for="quick-question" class="field-label">想问什么？（可选）</label>
+    <textarea id="quick-question" rows="2" placeholder="这句话是什么意思？为什么这样表达？"></textarea>
+    <div class="row"><button id="quick-copy" class="button primary small">复制给 GPT</button></div>
+    <p id="quick-status" class="helper" role="status" aria-live="polite">原位准备问题，不暂停或跳转视频。复制后在现有 GPT 侧栏粘贴；也可手动打开 ChatGPT 扩展。</p>
+    <details id="quick-preview"><summary>查看原句、前后文和问题</summary><textarea id="quick-context" rows="5" readonly aria-label="待交给 GPT 的完整上下文"></textarea></details>
+  </section>
 </body>
 </html>

@@ -11,3 +11,11 @@
 .prompt-grid{grid-template-columns:1fr}.prompt-card{gap:5px;padding:13px}.prompt-card strong{font-size:14px}
 .prompt-card small{line-height:1.65}.tutor-target{max-height:240px;overflow:auto;overflow-wrap:anywhere}
 #task-status{margin-top:12px}#selection-summary .section-label{letter-spacing:0}
+/* Follow playback only within the transcript; questions float above the current view. */
+#transcript-list{position:relative;max-height:clamp(180px,56vh,560px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;overflow-anchor:none;padding:3px 5px 3px 2px}
+.follow-controls{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:-5px 0 10px}.follow-controls .helper{font-size:10px}
+.quick-tutor{position:fixed;z-index:1000;max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);overflow:auto;overscroll-behavior:contain;background:#fffef9;border:1px solid #adc6a7;border-radius:12px;box-shadow:0 8px 32px #18372b33;padding:13px;font-size:12px}
+.quick-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.quick-heading strong{font-size:13px;color:var(--green)}
+#quick-quote{font:13px/1.7 "Segoe UI","Microsoft YaHei",sans-serif;max-height:78px;overflow:auto;margin:8px 0;padding-left:9px}
+#quick-question{min-height:54px}.quick-tutor .row{margin-top:9px}#quick-status{margin-top:9px}
+#quick-preview{font-size:11px;color:var(--muted);margin-top:9px}#quick-context{margin-top:7px;min-height:110px;font-size:11px}

@@ -126,6 +126,13 @@
     }
     return found >= 0 && time < cues[found].endTime ? found : -1;
   }
+  function transcriptScrollTop({ scrollTop, viewportHeight, itemTop, itemHeight, contentHeight }) {
+    if (![scrollTop, viewportHeight, itemTop, itemHeight, contentHeight].every(Number.isFinite) || viewportHeight <= 0) return scrollTop;
+    const padding = Math.min(20, viewportHeight * .1);
+    if (itemTop >= scrollTop + padding && itemTop + itemHeight <= scrollTop + viewportHeight - padding) return scrollTop;
+    const next = itemHeight >= viewportHeight - padding * 2 ? itemTop - padding : itemTop - (viewportHeight - itemHeight) / 2;
+    return Math.max(0, Math.min(Math.max(0, contentHeight - viewportHeight), next));
+  }
   function validateRange(start, end, duration = 0) {
     if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end - start < 0.15) {
       throw new Error('起点必须不小于 0，终点至少比起点晚 0.15 秒。');
@@ -195,7 +202,7 @@
     } });
   }
   const api = { parseTime, formatTime, cleanText, normalizeCues, parseTranscript, makeSegments,
-    activeCueIndex, validateRange, selectPassage, snapshot, buildPrompt, createContextGate };
+    activeCueIndex, transcriptScrollTop, validateRange, selectPassage, snapshot, buildPrompt, createContextGate };
   root.StudioCore = Object.freeze(api);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);

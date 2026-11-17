@@ -100,7 +100,7 @@
       #english-intensive-studio .eis-bar button:focus-visible,#english-intensive-studio .eis-select:focus-visible{outline:2px solid #d2e8a6;outline-offset:2px}
       @media(max-width:400px){#english-intensive-studio .eis-brand{font-size:11px}#english-intensive-studio .eis-bar{gap:5px;padding:9px 10px}}`;
     const bar = el('div', '', 'eis-bar');
-    bar.append(el('span', 'Intensive Studio · v0.4', 'eis-brand'));
+    bar.append(el('span', 'Intensive Studio · v0.4.1', 'eis-brand'));
     recordBadge = el('span', '', 'eis-record-badge'); bar.append(recordBadge);
     const reset = el('button', '重置', 'eis-reset'); reset.type = 'button'; reset.title = '恢复默认左栏宽度';
     reset.addEventListener('click', resetLayout); bar.append(reset);

@@ -1,6 +1,6 @@
 {
   "name": "english-intensive-studio",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "A local-first Chrome MV3 English study companion for YouTube",
   "scripts": {

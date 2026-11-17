@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "English Intensive Studio · 英语精学",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "理解视频内容，也学习英语表达：连续选段、精听跟读、录音对比，为 GPT 准备讨论与回应任务。录音不自动上传。",
   "minimum_chrome_version": "116",
   "permissions": ["scripting"],
